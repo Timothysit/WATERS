@@ -4,7 +4,8 @@ plotFolder = '/media/timsit/T7/test-detection/results/plots/prePostTTX/';
 % pre_post_TTX_pairs = {'2000803_slice3_6', '2000803_slice3_7_TTX'}; % N x 2 cell array, where N is the number of pre-post pairs 
 % pre_post_TTX_pairs = {'191210_FTD_slice5_DIV_g07_2019_pre_ttx', '191210_FTD_slice5_DIV_g07_2019_ttx'};
 pre_post_TTX_pairs = {'200114_FTDOrg_GrpB_1B_Slice3_pre_TTX', '200114_FTDOrg_GrpB_1B_Slice3_TTX'};
-spike_features_to_extract = {'spikeWidth', 'spikeAmplitude'};
+spike_features_to_extract = {'spikeWidth', 'spikeAmplitude', 'spikeSymmetry'};
+spike_features_to_plot = {'spikeAmplitude', 'spikeSymmetry'};
 
 
 %% Compile data from pre/post TTX files
@@ -228,8 +229,8 @@ for wname_index = 1:length(wnames_to_plot)
         hold on 
         scatter(post_TTX_all_electrode_spike_amplitude, post_TTX_all_electrode_spike_width, 'k');
         legend('Pre-TTX', 'Post-TTX')
-        xlabel('Spike amplitude');
-        ylabel('Spike width');
+        xlabel(spike_features_to_plot{1});
+        ylabel(spike_features_to_plot{2});
         title('Electrodes where pre-TTX > post-TTX spike rate')
         set(gcf, 'color', 'white')
         set(gcf, 'PaperPosition', [0.25, 0.25, 13, 13])
@@ -274,65 +275,82 @@ for wname_index = 1:length(wnames_to_plot)
         print(gcf, fullfile(plotFolder, strcat(wname, '_L_', L_str, 'pre_post_TTX_spikeProperties_w_histogram_subset_active', '.png')), '-dpng','-r300')
         close(gcf)
         
-        %% Plot width vs amplitude for each electrode 
+        %% Plot feature 1 (eg. width) vs feature 2 (eg. amplitude) for each electrode 
         num_electrodes = length(pre_TTX_info.preTTX_spikeAmplitude);
         for electrode_idx = 1:num_electrodes
             
+            % TODO: currently very hard-coded, store everything in vector
+            % rather than two variables 
+
+            pre_TTX_all_electrode_feature_1 = pre_TTX_info.(strcat('preTTX_', spike_features_to_plot{1}));
+            pre_TTX_all_electrode_feature_1 = pre_TTX_all_electrode_feature_1{electrode_idx};
             
-            pre_TTX_all_electrode_spike_amplitude = pre_TTX_info.preTTX_spikeAmplitude{electrode_idx};
-            pre_TTX_all_electrode_spike_width = pre_TTX_info.preTTX_spikeWidth{electrode_idx};
-            post_TTX_all_electrode_spike_amplitude = post_TTX_info.postTTX_spikeAmplitude{electrode_idx};
-            post_TTX_all_electrode_spike_width = post_TTX_info.postTTX_spikeWidth{electrode_idx};
+            post_TTX_all_electrode_feature_1 = post_TTX_info.(strcat('postTTX_', spike_features_to_plot{1}));
+            post_TTX_all_electrode_feature_1 = post_TTX_all_electrode_feature_1{electrode_idx};
             
-            if length(pre_TTX_all_electrode_spike_amplitude) > 0
+            pre_TTX_all_electrode_feature_2 = pre_TTX_info.(strcat('preTTX_', spike_features_to_plot{2}));
+            pre_TTX_all_electrode_feature_2 = pre_TTX_all_electrode_feature_2{electrode_idx};
+            
+            post_TTX_all_electrode_feature_2 = post_TTX_info.(strcat('postTTX_', spike_features_to_plot{2}));
+            post_TTX_all_electrode_feature_2 = post_TTX_all_electrode_feature_2{electrode_idx};
+            
+
+            
+            % pre_TTX_all_electrode_spike_amplitude = pre_TTX_info.preTTX_spikeAmplitude{electrode_idx};
+            % pre_TTX_all_electrode_spike_width = pre_TTX_info.preTTX_spikeWidth{electrode_idx};
+            % post_TTX_all_electrode_spike_amplitude = post_TTX_info.postTTX_spikeAmplitude{electrode_idx};
+            % post_TTX_all_electrode_spike_width = post_TTX_info.postTTX_spikeWidth{electrode_idx};
+            
+            if length(pre_TTX_all_electrode_feature_1) > 0
                 
                 figure;
                 subplot(3, 3, [4, 5, 7, 8])
             
-                scatter(pre_TTX_all_electrode_spike_amplitude, pre_TTX_all_electrode_spike_width, 'r');
+                scatter(pre_TTX_all_electrode_feature_1, pre_TTX_all_electrode_feature_2, 'r');
                 hold on 
-                scatter(post_TTX_all_electrode_spike_amplitude, post_TTX_all_electrode_spike_width, 'k');
+                scatter(post_TTX_all_electrode_feature_1, post_TTX_all_electrode_feature_2, 'k');
                 legend('Pre-TTX', 'Post-TTX')
-                xlabel('Spike amplitude');
-                ylabel('Spike width');
+                xlabel(spike_features_to_plot{1});
+                ylabel(spike_features_to_plot{2});
                 set(gcf, 'color', 'white')
                 set(gcf, 'PaperPosition', [0.25, 0.25, 13, 13])
                 hold on 
                 % include histogram 
                 subplot(3, 3, [1, 2])
-                min_spike_amp = min([min(pre_TTX_all_electrode_spike_amplitude), ...
-                                     min(post_TTX_all_electrode_spike_amplitude), ...
+                
+                min_feature_1 = min([min(pre_TTX_all_electrode_feature_1), ...
+                                     min(post_TTX_all_electrode_feature_1), ...
                                     ]);
-                max_spike_amp = max([max(pre_TTX_all_electrode_spike_amplitude), ...
-                                     max(post_TTX_all_electrode_spike_amplitude), ...
+                max_feature_1 = max([max(pre_TTX_all_electrode_feature_1), ...
+                                     max(post_TTX_all_electrode_feature_1), ...
                                     ]);
 
 
-                amp_edges = linspace(min_spike_amp, max_spike_amp, 50);
-                [pre_ttx_spike_amp_counts, edges] = histcounts(pre_TTX_all_electrode_spike_amplitude, amp_edges, 'Normalization', 'pdf');
-                [post_ttx_spike_amp_counts, edges] = histcounts(post_TTX_all_electrode_spike_amplitude, amp_edges, 'Normalization', 'pdf');
-                plot(amp_edges(2:end), pre_ttx_spike_amp_counts, 'color', 'r', 'linewidth', 2);
+                feature_1_edges = linspace(min_feature_1, max_feature_1, 50);
+                [pre_ttx_feature_1_counts, edges] = histcounts(pre_TTX_all_electrode_feature_1, feature_1_edges, 'Normalization', 'pdf');
+                [post_ttx_feature_1_counts, edges] = histcounts(post_TTX_all_electrode_feature_1, feature_1_edges, 'Normalization', 'pdf');
+                plot(amp_edges(2:end), pre_ttx_feature_1_counts, 'color', 'r', 'linewidth', 2);
                 hold on
-                plot(amp_edges(2:end), post_ttx_spike_amp_counts, 'color', 'k', 'linewidth', 2);
+                plot(amp_edges(2:end), post_ttx_feature_1_counts, 'color', 'k', 'linewidth', 2);
                 ylabel('Probability density')
 
 
                 subplot(3, 3, [6, 9])
 
-                min_spike_width = min([min(pre_TTX_all_electrode_spike_width), ...
-                                     min(post_TTX_all_electrode_spike_width), ...
+                min_feature_2 = min([min(pre_TTX_all_electrode_feature_2), ...
+                                     min(post_TTX_all_electrode_feature_2), ...
                                     ]);
-                max_spike_width = max([max(pre_TTX_all_electrode_spike_width), ...
-                                     max(post_TTX_all_electrode_spike_width), ...
+                max_feature_2 = max([max(pre_TTX_all_electrode_feature_2), ...
+                                     max(post_TTX_all_electrode_feature_2), ...
                                     ]);
 
 
-                width_edges = linspace(min_spike_width, max_spike_width, 50);
-                [pre_ttx_spike_width_counts, edges] = histcounts(pre_TTX_all_electrode_spike_width, width_edges, 'Normalization', 'pdf');
-                [post_ttx_spike_width_counts, edges] = histcounts(post_TTX_all_electrode_spike_width, width_edges, 'Normalization', 'pdf');
-                plot(pre_ttx_spike_width_counts, width_edges(2:end), 'color', 'r', 'linewidth', 2);
+                width_edges = linspace(min_feature_2, max_feature_2, 50);
+                [pre_ttx_feature_2_counts, edges] = histcounts(pre_TTX_all_electrode_feature_2, width_edges, 'Normalization', 'pdf');
+                [post_ttx_feature_2_counts, edges] = histcounts(post_TTX_all_electrode_feature_2, width_edges, 'Normalization', 'pdf');
+                plot(pre_ttx_feature_2_counts, width_edges(2:end), 'color', 'r', 'linewidth', 2);
                 hold on
-                plot(post_ttx_spike_width_counts, width_edges(2:end), 'color', 'k', 'linewidth', 2);
+                plot(post_ttx_feature_2_counts, width_edges(2:end), 'color', 'k', 'linewidth', 2);
                 xlabel('Probability density')
 
                 print(gcf, fullfile(plotFolder, strcat(wname, '_L_', L_str, 'pre_post_TTX_spikeProperties_w_histogram_electrode_', num2str(electrode_idx), '.png')), '-dpng','-r300')
@@ -421,6 +439,29 @@ function spike_prop_per_electrode = getSpikePropPerElect(spikeDetectionData, spi
             spikeWaveforms = spikeDetectionData.spikeWaveforms{electrode_index}.(detection_method);
             spike_amplitude = spikeWaveforms(:, peak_x);
             spike_prop_per_electrode{electrode_index} = spike_amplitude;
+        elseif strcmp(spikeProp, 'spikeSymmetry')
+            spikeWaveforms = spikeDetectionData.spikeWaveforms{electrode_index}.(detection_method);
+            spike_amplitude = spikeWaveforms(:, peak_x);
+            spike_symmetry = zeros(size(spikeWaveforms, 1), 1);
+            for spike_idx = 1:size(spikeWaveforms)
+                spike_wave = spikeWaveforms(spike_idx, :);
+                half_peak_y = spike_amplitude(spike_idx) / 2;
+                cross_half_peak_x = find(spike_wave > half_peak_y);
+                % Find latest time of crossing half_peak_y before peak 
+                % And find earliest time of crossing half_peak_y after peak
+                half_peak_x1 = max(cross_half_peak_x(cross_half_peak_x < peak_x));
+                half_peak_x2 = min(cross_half_peak_x(cross_half_peak_x > peak_x));
+                spike_widths(spike_idx) = (half_peak_x2 - half_peak_x1) / fs;
+
+                spike_first_half = spike_wave(1:peak_x-1);
+                spike_second_half_flipped = fliplr(spike_wave(peak_x+1:end-2));
+                % higher value means less symmetric, 0 means perfectly
+                % symmetric (no difference between first half and second half
+                % reversed
+                spike_symmetry(spike_idx) = sum(abs(spike_first_half - spike_second_half_flipped));
+            end 
+            spike_prop_per_electrode{electrode_index} = spike_symmetry;
+            
             
         end
         
